@@ -1,16 +1,12 @@
 // Lab 1
 
 /*
-
 •	помилки на початку арифметичного виразу ( наприклад, вираз не може починатись із закритої дужки, алгебраїчних операцій * та /); ✅
 •	помилки, пов’язані з неправильним написанням імен змінних,  констант та при необхідності функцій;✅
 •	помилки у кінці виразу (наприклад, вираз не може закінчуватись будь-якою алгебраїчною операцією); ✅
 •	помилки в середині виразу (подвійні операції ✅, відсутність операцій перед або між дужками, операції* або / після відкритої дужки тощо✅);
-•	помилки, пов’язані з використанням дужок ( нерівна кількість відкритих та закритих дужок, неправильний порядок дужок, пусті дужки).
-
+•	помилки, пов’язані з використанням дужок ( нерівна кількість відкритих та закритих дужок, неправильний порядок дужок, пусті дужки).✅
 •	помилки, пов’язані з недопустимими символами✅
-
-
 */
 
 const analyseCalculation = async (calculation) => {
@@ -214,9 +210,25 @@ const checkCalculationBrackets = (calculation) => {
     };
   }
 
-  return {
-    passed: true,
+  const emptyBracketsRegex = /\(\)/g;
+
+  if (!calculation.match(emptyBracketsRegex)) {
+    return {
+      passed: true,
+    };
+  }
+
+  const res = {
+    passed: false,
+    errors: [],
   };
+
+  const matches = calculation.matchAll(emptyBracketsRegex);
+  for (const match of matches) {
+    res.errors.push(`Пусті дужки '${match[0]}' на місці ${match.index + 1}`);
+  }
+
+  return res;
 };
 
 const checkFunctionBrackets = (calculation) => {
@@ -262,15 +274,18 @@ const checkFunctionBrackets = (calculation) => {
   // await analyseCalculation('cos(a)*sin(b)-tan(c)/(1+d)');
 
   //incorrect
-  await analyseCalculation('a+b*(c-)/e');
-  await analyseCalculation('3+*(2-8)');
-  await analyseCalculation('y=3+(2-8)=3');
-  await analyseCalculation('(a+b)*(c-d/e');
-  await analyseCalculation('x*(y+z-sin(a*x)/(cos(b+y');
-  await analyseCalculation('2.5*(3+4.81..2/k-q*t)');
-  await analyseCalculation('a+b^(c*d');
-  await analyseCalculation('5.67*x++3*(y-4.81)');
-  await analyseCalculation('cos(a)**sin+(b)');
-  await analyseCalculation('a+b/ - 4.81/(x*y)');
-  await analyseCalculation('x*(y+z)-sin(a*x)/(cos+(b+y)*tan(c/x))');
+  //   await analyseCalculation('a+b*(c-)/e');
+  //   await analyseCalculation('3+*(2-8)');
+  //   await analyseCalculation('y=3+(2-8)=3');
+  //   await analyseCalculation('(a+b)*(c-d/e');
+  //   await analyseCalculation('x*(y+z-sin(a*x)/(cos(b+y');
+  //   await analyseCalculation('2.5*(3+4.81..2/k-q*t)');
+  //   await analyseCalculation('a+b^(c*d');
+  //   await analyseCalculation('5.67*x++3*(y-4.81)');
+  //   await analyseCalculation('cos(a)**sin+(b)');
+  //   await analyseCalculation('a+b/ - 4.81/(x*y)');
+  //   await analyseCalculation('x*(y+z)-sin(a*x)/(cos+(b+y)*tan(c/x))');
+  // await analyseCalculation('x*(y+z)-sin()/(cos(b+y)*tan(c/x))');
+  //   await analyseCalculation('cos(a)*sin(b)-)3/8(/(1+d)');
+
 })();
