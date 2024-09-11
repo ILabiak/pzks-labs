@@ -23,6 +23,7 @@ const analyseCalculation = async (calculation) => {
     Promise.resolve(checkCalculationConstants(calculation)),
     Promise.resolve(checkCalculationBrackets(calculation)),
     Promise.resolve(checkFunctionBrackets(calculation)),
+    Promise.resolve(checkConstantVariable(calculation)),
   ]);
   const errors = [];
   for (let res of results) {
@@ -255,37 +256,64 @@ const checkFunctionBrackets = (calculation) => {
   return res;
 };
 
+const checkConstantVariable = (calculation) => {
+  const regex = /\d+[a-zA-Z]/g;
+
+  if (!calculation.match(regex)) {
+    return {
+      passed: true,
+    };
+  }
+
+  const res = {
+    passed: false,
+    errors: [],
+  };
+
+  const matches = calculation.matchAll(regex);
+  for (const match of matches) {
+    res.errors.push(
+      `Константа біля змінної без операції множення '${match[0]}' на місці ${
+        match.index + 1
+      }`
+    );
+  }
+
+  return res;
+};
+
 (async () => {
   //correct
-  // await analyseCalculation(
-  //   'a+b*(c*cos(t-a*x)-d*sin(t+a*x)/(4.81*k-q*t))/(d*cos(t+a*y/f1(5.616*x-t))+c*sin(t-a*y*(u-v*i)))'
-  // );
-  // await analyseCalculation('a+b*(c-d)/e');
-  // await analyseCalculation('3+5*(2-8)/4');
-  // await analyseCalculation('y=3+5*(2-8)/4');
-  // await analyseCalculation('(a+b)*(c-d)/e');
-  // await analyseCalculation('x*(y+z)-sin(a*x)/(cos(b+y)*tan(c/x))');
-  // await analyseCalculation(
-  //   '2.5*(3+4.81/k-q*t)/(cos(t+a*y/f1(5.616*x-t))+c*sin(t-a*y))'
-  // );
-  // await analyseCalculation('a+b^(c*d)-sqrt(x/(y*z))');
-  // await analyseCalculation('5.67*x + 3*(y - 4.81)');
-  // await analyseCalculation('a+b/c - 4.81/(x*y)');
-  // await analyseCalculation('cos(a)*sin(b)-tan(c)/(1+d)');
+  await analyseCalculation(
+    'a+b*(c*cos(t-a*x)-d*sin(t+a*x)/(4.81*k-q*t))/(d*cos(t+a*y/f1(5.616*x-t))+c*sin(t-a*y*(u-v*i)))'
+  );
+  await analyseCalculation('a+b*(c-d)/e');
+  await analyseCalculation('3+5*(2-8)/4');
+  await analyseCalculation('y=3+5*(2-8)/4');
+  await analyseCalculation('(a+b)*(c-d)/e');
+  await analyseCalculation('x*(y+z)-sin(a*x)/(cos(b+y)*tan(c/x))');
+  await analyseCalculation(
+    '2.5*(3+4.81/k-q*t)/(cos(t+a*y/f1(5.616*x-t))+c*sin(t-a*y))'
+  );
+  await analyseCalculation('a+b^(c*d)-sqrt(x/(y*z))');
+  await analyseCalculation('5.67*x + 3*(y - 4.81)');
+  await analyseCalculation('a+b/c - 4.81/(x*y)');
+  await analyseCalculation('cos(a)*sin(b)-tan(c)/(1+d)');
 
   //incorrect
-  //   await analyseCalculation('a+b*(c-)/e');
-  //   await analyseCalculation('3+*(2-8)');
-  //   await analyseCalculation('y=3+(2-8)=3');
-  //   await analyseCalculation('(a+b)*(c-d/e');
-  //   await analyseCalculation('x*(y+z-sin(a*x)/(cos(b+y');
-  //   await analyseCalculation('2.5*(3+4.81..2/k-q*t)');
-  //   await analyseCalculation('a+b^(c*d');
-  //   await analyseCalculation('5.67*x++3*(y-4.81)');
-  //   await analyseCalculation('cos(a)**sin+(b)');
-  //   await analyseCalculation('a+b/ - 4.81/(x*y)');
-  //   await analyseCalculation('x*(y+z)-sin(a*x)/(cos+(b+y)*tan(c/x))');
-  // await analyseCalculation('x*(y+z)-sin()/(cos(b+y)*tan(c/x))');
-  //   await analyseCalculation('cos(a)*sin(b)-)3/8(/(1+d)');
-
+  await analyseCalculation('a+b*(c-)/e');
+  await analyseCalculation('3+*(2-8)');
+  await analyseCalculation('y=3+(2-8t)=3');
+  await analyseCalculation('(a+b)*(c-d/e');
+  await analyseCalculation('x*(y+z-sin(a*x)/(cos(b+y');
+  await analyseCalculation('2.5*(3+4.81..2/k-q*t)');
+  await analyseCalculation('a+b^(c*d');
+  await analyseCalculation('5.67*x++3*(y-4.81)');
+  await analyseCalculation('cos(a)**sin+(b)');
+  await analyseCalculation('a+b/ - 4.81/(x*y)');
+  await analyseCalculation('x*(y+z)-sin(a*x)/(cos+(b+y)*tan(c/x))');
+  await analyseCalculation('x*(y+z)-sin()/(cos(b+y)*tan(c/x))');
+  await analyseCalculation('cos(a)*sin(b)-)3/8(/(1+d)');
 })();
+
+// Fix 5t (should be 5*t)
