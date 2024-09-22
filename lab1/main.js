@@ -92,7 +92,7 @@ const checkCalculationEnd = (calculation) => {
 // перевірка на наявність некоректних символів, подвійні операції, операції */+- перед закритою дужкою, операції */ після відкритої дужки
 const checkWrongCharacters = (calculation) => {
   const validationRegex =
-    /([^a-z\d\.\/*+\-\=())\^ ])|([\/\*\\+\-^]{2})|([\/\*\+\-^]\))|(\([\/\*^])|([\.]{2})/g;
+    /([^a-z\d\.\/*+\-\=()) ])|([\/\*\\+\-^]{2})|([\/\*\+\-^]\))|(\([\/\*^])|([\.]{2})/g;
   if (!calculation.match(validationRegex)) {
     return {
       passed: true,
@@ -282,38 +282,198 @@ const checkConstantVariable = (calculation) => {
   return res;
 };
 
+// Зробити токени для кожного елемента арифметичного виразу
+const tokenize = (expression) => {
+  const tokens = [];
+  let i = 0;
+
+  while (i < expression.length) {
+    const char = expression[i];
+
+    if (/\s/.test(char)) {
+      i++;
+    } else if (/[+\-]/.test(char)) {
+      const nextChar = expression[i + 1];
+      const prevToken = tokens[tokens.length - 1];
+
+      if (
+        !prevToken ||
+        prevToken.type === 'Operator' ||
+        prevToken.value === '('
+      ) {
+        if (/[0-9.]/.test(nextChar)) {
+          let number = char;
+          i++;
+          while (i < expression.length && /[0-9.]/.test(expression[i])) {
+            number += expression[i];
+            i++;
+          }
+          tokens.push({ type: 'Number', value: parseFloat(number) });
+        } else if (/[a-zA-Z]/.test(nextChar)) {
+          // якщо функція
+          if (/[a-zA-Z]/.test(expression[i + 2]) || prevToken.value === ')') {
+            tokens.push({ type: 'Operator', value: char });
+            i++;
+          } else {
+            // якщо змінна
+            let variable = char;
+            i++;
+            while (i < expression.length && /[a-zA-Z]/.test(expression[i])) {
+              variable += expression[i];
+              i++;
+            }
+            tokens.push({ type: 'Variable', value: variable });
+          }
+        } else {
+          throw new Error('Unexpected character after -: ' + nextChar);
+        }
+      } else {
+        tokens.push({ type: 'Operator', value: char });
+        i++;
+      }
+    } else if (/[0-9.]/.test(char)) {
+      let number = '';
+      while (i < expression.length && /[0-9.]/.test(expression[i])) {
+        number += expression[i];
+        i++;
+      }
+      tokens.push({ type: 'Number', value: parseFloat(number) });
+    } else if (/[a-zA-Z]/.test(char)) {
+      let variable = '';
+      while (i < expression.length && /[a-zA-Z]/.test(expression[i])) {
+        variable += expression[i];
+        i++;
+      }
+      tokens.push({ type: 'Variable', value: variable });
+    } else if (/[*/()]/.test(char)) {
+      tokens.push({ type: 'Operator', value: char });
+      i++;
+    } else {
+      throw new Error('Unexpected character: ' + char);
+    }
+  }
+
+  return tokens;
+};
+
+// Парсинг початкового елемента
+const parsePrimary = (tokens) => {
+  const token = tokens.shift();
+
+  if (token.type === 'Number') {
+    return { type: 'Number', value: token.value };
+  }
+
+  if (token.type === 'Variable') {
+    if (tokens[0] && tokens[0].value === '(') {
+      return parseFunction(token, tokens);
+    }
+    return { type: 'Variable', name: token.value };
+  }
+
+  if (token.value === '(') {
+    const expression = parseExpression(tokens);
+    tokens.shift();
+    return expression;
+  }
+
+  console.log(tokens);
+  throw new Error('Unexpected token: ' + token.value);
+};
+
+// Парсинг функцій
+const parseFunction = (funcToken, tokens) => {
+  tokens.shift();
+  const arg = parseExpression(tokens);
+  tokens.shift();
+  return {
+    type: 'FunctionExpression',
+    function: funcToken.value,
+    argument: arg,
+  };
+};
+
+// Парсинг множення та ділення
+const parseMultiplicative = (tokens) => {
+  let left = parsePrimary(tokens);
+
+  while (tokens.length > 0 && /[*/]/.test(tokens[0].value)) {
+    const operator = tokens.shift().value;
+    const right = parsePrimary(tokens);
+    left = {
+      type: 'BinaryExpression',
+      left: left,
+      operator: operator,
+      right: right,
+    };
+  }
+
+  return left;
+};
+
+// Парсинг додавання та віднімання
+const parseExpression = (tokens) => {
+  let left = parseMultiplicative(tokens);
+
+  while (tokens.length > 0 && /[+\-]/.test(tokens[0].value)) {
+    const operator = tokens.shift().value;
+    const right = parseMultiplicative(tokens);
+    left = {
+      type: 'BinaryExpression',
+      left: left,
+      operator: operator,
+      right: right,
+    };
+  }
+
+  return left;
+};
+
+const parse = (expression) => {
+  if (expression.includes('=')) {
+    let index = expression.indexOf('=');
+    expression = expression.slice(index + 1);
+  }
+  const tokens = tokenize(expression);
+  const parsed = parseExpression(tokens);
+  return parsed;
+};
+
 (async () => {
   //correct
-  await analyseCalculation(
-    'a+b*(c*cos(t-a*x)-d*sin(t+a*x)/(4.81*k-q*t))/(d*cos(t+a*y/f1(5.616*x-t))+c*sin(t-a*y*(u-v*i)))'
-  );
-  await analyseCalculation('a+b*(c-d)/e');
-  await analyseCalculation('3+5*(2-8)/4');
-  await analyseCalculation('y=3+5*(2-8)/4');
-  await analyseCalculation('(a+b)*(c-d)/e');
-  await analyseCalculation('x*(y+z)-sin(a*x)/(cos(b+y)*tan(c/x))');
-  await analyseCalculation(
-    '2.5*(3+4.81/k-q*t)/(cos(t+a*y/f1(5.616*x-t))+c*sin(t-a*y))'
-  );
-  await analyseCalculation('a+b^(c*d)-sqrt(x/(y*z))');
-  await analyseCalculation('5.67*x + 3*(y - 4.81)');
-  await analyseCalculation('a+b/c - 4.81/(x*y)');
-  await analyseCalculation('cos(a)*sin(b)-tan(c)/(1+d)');
-
+  // await analyseCalculation(
+  //   'a+b*(c*cos(t-a*x)-d*sin(t+a*x)/(4.81*k-q*t))/(d*cos(t+a*y/f+(5.616*x-t))+c*sin(t-a*y*(u-v*i)))'
+  // );
+  // await analyseCalculation('a+b*(c-d)/e');
+  // await analyseCalculation('3+5*(2-8)/4');
+  // await analyseCalculation('y=3+5*(2-8)/4');
+  // await analyseCalculation('(a+b)*(c-d)/e');
+  // await analyseCalculation('x*(y+z)-sin(a*x)/(cos(b+y)*tan(c/x))');
+  // await analyseCalculation(
+  //   '2.5*(3+4.81/k-q*t)/(cos(t+a*y/f+(5.616*x-t))+c*sin(t-a*y))'
+  // );
+  // await analyseCalculation('5.67*x + 3*(y - 4.81)');
+  // await analyseCalculation('a+b/c - 4.81/(x*y)');
+  // await analyseCalculation('cos(a)*sin(b)-tan(c)/(1+d)');
   //incorrect
-  await analyseCalculation('a+b*(c-)/e');
-  await analyseCalculation('3+*(2-8)');
-  await analyseCalculation('y=3+(2-8t)=3');
-  await analyseCalculation('(a+b)*(c-d/e');
-  await analyseCalculation('x*(y+z-sin(a*x)/(cos(b+y');
-  await analyseCalculation('2.5*(3+4.81..2/k-q*t)');
-  await analyseCalculation('a+b^(c*d');
-  await analyseCalculation('5.67*x++3*(y-4.81)');
-  await analyseCalculation('cos(a)**sin+(b)');
-  await analyseCalculation('a+b/ - 4.81/(x*y)');
-  await analyseCalculation('x*(y+z)-sin(a*x)/(cos+(b+y)*tan(c/x))');
-  await analyseCalculation('x*(y+z)-sin()/(cos(b+y)*tan(c/x))');
-  await analyseCalculation('cos(a)*sin(b)-)3/8(/(1+d)');
+  //   await analyseCalculation('a+b*(c-)/e');
+  //   await analyseCalculation('3+*(2-8)');
+  //   await analyseCalculation('y=3+(2-8t)=3');
+  //   await analyseCalculation('(a+b)*(c-d/e');
+  //   await analyseCalculation('x*(y+z-sin(a*x)/(cos(b+y');
+  //   await analyseCalculation('2.5*(3+4.81..2/k-q*t)');
+  //   await analyseCalculation('a+b^(c*d');
+  //   await analyseCalculation('a+b^(c*d)-sqrt(x/(y*z))');
+  //   await analyseCalculation('5.67*x++3*(y-4.81)');
+  //   await analyseCalculation('cos(a)**sin+(b)');
+  //   await analyseCalculation('a+b/ - 4.81/(x*y)');
+  //   await analyseCalculation('x*(y+z)-sin(a*x)/(cos+(b+y)*tan(c/x))');
+  //   await analyseCalculation('x*(y+z)-sin()/(cos(b+y)*tan(c/x))');
+  //   await analyseCalculation('cos(a)*sin(b)-)3/8(/(1+d)');
+  //   await analyseCalculation('g1+(a+2.3))+(6-sin(5)');
 })();
 
-// Fix 5t (should be 5*t)
+module.exports = {
+  analyseCalculation,
+  parse,
+};
