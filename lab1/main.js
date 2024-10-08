@@ -311,7 +311,7 @@ const tokenize = (expression) => {
           tokens.push({ type: 'Number', value: parseFloat(number) });
         } else if (/[a-zA-Z]/.test(nextChar)) {
           // якщо функція
-          if (/[a-zA-Z]/.test(expression[i + 2]) || prevToken.value === ')') {
+          if (/[a-zA-Z]/.test(expression[i + 2]) || prevToken?.value === ')') {
             tokens.push({ type: 'Operator', value: char });
             i++;
           } else {

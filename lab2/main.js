@@ -186,9 +186,28 @@ const refactorMinusesInExpression = (node) => {
   return node;
 };
 
+const checkAndOptimise = async (expression) => {
+  const analized = await analyseCalculation(expression);
+  if (!analized) return;
+  const refactoredExp = refactorDivisiosInExpression(expression);
+  const parsed = parse(refactoredExp);
+  // console.log(JSON.stringify(parsed, null, 2));
+  if (!parsed.type) {
+    console.log('Error while parsing expression');
+    return;
+  }
+  let optimized = refactorMinusesInExpression(parsed);
+  optimized = optimize(optimized);
+  if (!optimized.type) {
+    console.log('Error while optimizing expression');
+    return;
+  }
+  return optimized;
+}
+
 (async () => {
   // const expression = 'x*(y+z)-sin(-3.4*x)/(cos(b+y)*sqrt(c/x))';
-  // const expression = '-5.67*x+3*(-y+4.81+0+2.4)';
+  const expression = '-a+(v+p*(6-h+b*(d+u+5+10)))';
   // const expression = 'a*b*c*d*e*g';
   // const expression = 'a/b/c/d/e';
   // const expression = '(a*c)/(b*d)';
@@ -198,7 +217,7 @@ const refactorMinusesInExpression = (node) => {
   // const expression = '3-4.3-10-3.1-73.3';
 
   // const expression = 'a+b*(c-d)/e';
-  const expression = '3+5*(2-8)/4';
+  // const expression = '3+5*(2-8)/4';
   // const expression = '(a+b)*(c-d)/e';
   // const expression = 'y=3+5*(2-8)/5';
   // const expression = 'x*(y+z)-sin(a*x)/(cos(b+y)*tan(c/x))';
@@ -207,21 +226,28 @@ const refactorMinusesInExpression = (node) => {
   // const expression = 'a+b/c - 4.81/(x*y)';
   // const expression = 'cos(a)*sin(b)-tan(c)/(1+d)';
 
-  const analised = await analyseCalculation(expression);
-  if (!analised) return;
+  /*
+  const analized = await analyseCalculation(expression);
+  if (!analized) return;
   const refactoredExp = refactorDivisiosInExpression(expression);
   const parsed = parse(refactoredExp);
+  // console.log(JSON.stringify(parsed, null, 2));
   if (!parsed.type) {
     console.log('Error while parsing expression');
     return;
   }
-  let optimized = optimize(parsed);
+  let optimized = refactorMinusesInExpression(parsed);
+  optimized = optimize(optimized);
   if (!optimized.type) {
     console.log('Error while optimizing expression');
     return;
   }
-  optimized = refactorMinusesInExpression(optimized);
-  optimized = optimize(optimized);
   // console.log(JSON.stringify(optimized, null, 2));
   generateTree(optimized, 'tree');
+  */
 })();
+
+module.exports = {
+  generateTree,
+  checkAndOptimise
+}
