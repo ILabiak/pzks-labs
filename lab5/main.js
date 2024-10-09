@@ -1,146 +1,5 @@
 const { generateTree, checkAndOptimise } = require('../lab2/main');
 
-const inputAST = {
-  type: 'BinaryExpression',
-  left: {
-    type: 'BinaryExpression',
-    operator: '*',
-    left: {
-      type: 'Number',
-      value: 2.5,
-    },
-    right: {
-      type: 'BinaryExpression',
-      left: {
-        type: 'BinaryExpression',
-        operator: '+',
-        left: {
-          type: 'Number',
-          value: 3,
-        },
-        right: {
-          type: 'BinaryExpression',
-          left: {
-            type: 'Number',
-            value: 4.81,
-          },
-          operator: '/',
-          right: {
-            type: 'Variable',
-            name: 'k',
-          },
-        },
-      },
-      operator: '-',
-      right: {
-        type: 'BinaryExpression',
-        operator: '*',
-        left: {
-          type: 'Variable',
-          name: 'q',
-        },
-        right: {
-          type: 'Variable',
-          name: 't',
-        },
-      },
-    },
-  },
-  operator: '/',
-  right: {
-    type: 'BinaryExpression',
-    operator: '+',
-    left: {
-      type: 'FunctionExpression',
-      function: 'cos',
-      argument: {
-        type: 'BinaryExpression',
-        left: {
-          type: 'BinaryExpression',
-          left: {
-            type: 'Variable',
-            name: 't',
-          },
-          operator: '+',
-          right: {
-            type: 'BinaryExpression',
-            left: {
-              type: 'BinaryExpression',
-              left: {
-                type: 'Variable',
-                name: 'a',
-              },
-              operator: '*',
-              right: {
-                type: 'Variable',
-                name: 'y',
-              },
-            },
-            operator: '/',
-            right: {
-              type: 'Variable',
-              name: 'f',
-            },
-          },
-        },
-        operator: '+',
-        right: {
-          type: 'BinaryExpression',
-          left: {
-            type: 'BinaryExpression',
-            left: {
-              type: 'Number',
-              value: 5.616,
-            },
-            operator: '*',
-            right: {
-              type: 'Variable',
-              name: 'x',
-            },
-          },
-          operator: '-',
-          right: {
-            type: 'Variable',
-            name: 't',
-          },
-        },
-      },
-    },
-    right: {
-      type: 'BinaryExpression',
-      operator: '*',
-      left: {
-        type: 'Variable',
-        name: 'c',
-      },
-      right: {
-        type: 'FunctionExpression',
-        function: 'sin',
-        argument: {
-          type: 'BinaryExpression',
-          left: {
-            type: 'Variable',
-            name: 't',
-          },
-          operator: '-',
-          right: {
-            type: 'BinaryExpression',
-            left: {
-              type: 'Variable',
-              name: 'a',
-            },
-            operator: '*',
-            right: {
-              type: 'Variable',
-              name: 'y',
-            },
-          },
-        },
-      },
-    },
-  },
-};
-
 const operationTime = {
   '+': 5,
   '-': 5,
@@ -196,6 +55,50 @@ class MatrixSystem {
   }
 }
 
+let ganttChartData = [];
+
+// діаграма Ганта
+const printGanttChart = (data) => {
+  const processors = {};
+  const timeGone = {};
+  const totalDuration = data[data.length - 1].endTime;
+
+  data.forEach((task) => {
+    let operationStr;
+    const { processorId, operation, startTime, endTime } = task;
+    if (!processors[processorId]) {
+      processors[processorId] = ' '.repeat(totalDuration);
+    }
+    const duration = endTime - startTime;
+    const splitedStr = processors[processorId].split('');
+    if (operation.length > 1) {
+      operationStr = `[${operation}${'.'.repeat(
+        duration - operation.length - 2
+      )}]`;
+    } else {
+      operationStr = `[${operation.repeat(duration - 2)}]`;
+    }
+
+    if (startTime == 0) {
+      processors[processorId] = [
+        ...operationStr.split(''),
+        ...splitedStr.slice(endTime),
+      ].join('');
+    }
+    processors[processorId] = [
+      ...splitedStr.slice(0, startTime),
+      ...operationStr.split(''),
+      ...splitedStr.slice(endTime),
+    ].join('');
+
+  });
+
+  console.log('\nGantt Chart:');
+  Object.keys(processors).forEach((processorId) => {
+    console.log(`Processor ${processorId}: ${processors[processorId]}`);
+  });
+};
+
 // Обчислення часу в матричній системі з кільцевою топологією, 4 процесори
 const calculateParallelExecutionTime = async (
   node,
@@ -237,6 +140,26 @@ const calculateParallelExecutionTime = async (
 
     const operation = node.operator;
     const operationExecutionTime = operationTime[operation] || 0;
+    let currentStartTime = Math.max(leftTime, rightTime);
+
+    // перевірка, чи процесор в цей час виконує якусь іншу операцію. Якщо так - зачекати на завершення операції
+    processorLastTask = ganttChartData.findLast(
+      (el) => el.processorId == processor.id
+    );
+    if (processorLastTask) {
+      currentStartTime =
+        currentStartTime > processorLastTask.endTime
+          ? currentStartTime
+          : processorLastTask.endTime;
+    }
+
+
+    ganttChartData.push({
+      processorId: processor.id,
+      operation,
+      startTime: currentStartTime,
+      endTime: currentStartTime + operationExecutionTime,
+    });
 
     if (logging) {
       console.log(`Процесор ${processor.id} виконує операцію ${operation}`);
@@ -249,9 +172,7 @@ const calculateParallelExecutionTime = async (
     }
 
     // Час операції, яка зайняла більше всього часу + час обчислення операції + час передачі даних до потоків
-    return (
-      Math.max(leftTime, rightTime) + operationExecutionTime + transmissionTime
-    );
+    return currentStartTime + operationExecutionTime + transmissionTime;
   }
 
   if (node.type === 'FunctionExpression') {
@@ -266,6 +187,13 @@ const calculateParallelExecutionTime = async (
     if (logging) {
       console.log(`Процесор ${processor.id} виконує функцію ${functionName}`);
     }
+
+    ganttChartData.push({
+      processorId: processor.id,
+      operation: functionName,
+      startTime: argumentTime,
+      endTime: argumentTime + functionExecutionTime,
+    });
 
     return argumentTime + functionExecutionTime;
   }
@@ -311,15 +239,15 @@ const calculateExecutionTime = async (expressionObj, logging = false) => {
     `Час виконання програми у послідовному режимі: ${sequentialTime}`
   );
   console.log(
-    `Час виконання програми у паралельному режимі матричної системи: ${parallelTime}`
+    `Час виконання програми у паралельному режимі матричної системи: ${parallelTime - 2}`
   );
-  let speedupRate = sequentialTime / parallelTime;
+  let speedupRate = sequentialTime / (parallelTime - 2);
   console.log(`Коефіцієнт прискорення: ${speedupRate.toFixed(2)}`);
   console.log(`Ефективність: ${(speedupRate / 4).toFixed(2)}`);
 };
 
 (async () => {
-      // const expression = 'a*b*c*d*e*g';
+  // const expression = 'a*b*c*d*e*g';
   // const expression = 'a/b/c/d/e';
   // const expression = '(a*c)/(b*d)';
   // const expression = 'a-b-c-d-e-f';
@@ -337,9 +265,11 @@ const calculateExecutionTime = async (expressionObj, logging = false) => {
   // const expression = 'a+b/c - 4.81/(x*y)';
   // const expression = 'cos(a)*sin(b)-tan(c)/(1+d)';
   const res = await checkAndOptimise(
-    'a+b/c - 4.81/(x*y)'
+    'x*(y+z)-sin(a*x)/(cos(b+y)*tan(c/x))'
   );
+  // generateTree(res)
   if (res) {
     await calculateExecutionTime(res, false);
   }
+  printGanttChart(ganttChartData);
 })();
