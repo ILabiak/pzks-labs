@@ -17,18 +17,42 @@ const optimizeAssociative = (parsed, operator) => {
 
   flatten(parsed);
 
+  // const combine = (operands, operator) => {
+  //   if (operands.length === 1) {
+  //     return operands[0];
+  //   }
+
+  //   const mid = Math.floor(operands.length / 2);
+  //   return {
+  //     type: 'BinaryExpression',
+  //     operator: operator,
+  //     left: combine(operands.slice(0, mid), operator),
+  //     right: combine(operands.slice(mid), operator),
+  //   };
+  // };
+
   const combine = (operands, operator) => {
-    if (operands.length === 1) {
-      return operands[0];
+    // Combine operands two at a time to ensure balancing
+    while (operands.length > 1) {
+      let newOperands = [];
+      for (let i = 0; i < operands.length; i += 2) {
+        if (i + 1 < operands.length) {
+          // Combine pairs of operands
+          newOperands.push({
+            type: 'BinaryExpression',
+            operator: operator,
+            left: operands[i],
+            right: operands[i + 1],
+          });
+        } else {
+          // If there's an odd number of operands, just carry the last one forward
+          newOperands.push(operands[i]);
+        }
+      }
+      operands = newOperands; // Continue combining the newly generated operands
     }
 
-    const mid = Math.floor(operands.length / 2);
-    return {
-      type: 'BinaryExpression',
-      operator: operator,
-      left: combine(operands.slice(0, mid), operator),
-      right: combine(operands.slice(mid), operator),
-    };
+    return operands[0]; // The last remaining operand is the root of the balanced tree
   };
 
   return combine(flattenedOperands, operator);
@@ -207,12 +231,12 @@ const checkAndOptimise = async (expression) => {
 
 (async () => {
   // const expression = 'x*(y+z)-sin(-3.4*x)/(cos(b+y)*sqrt(c/x))';
-  const expression = '-a+(v+p*(6-h+b*(d+u+5+10)))';
+  // const expression = '-a+(v+p*(6-h+b*(d+u+5+10)))';
   // const expression = 'a*b*c*d*e*g';
   // const expression = 'a/b/c/d/e';
   // const expression = '(a*c)/(b*d)';
   // const expression = 'a-b-c-d-e-f';
-  // const expression = 'a+b+c+d+e+f';
+  const expression = 'a+b+c+d+e+f';
   // const expression = '3+4.2+43+14.5+3453';
   // const expression = '3-4.3-10-3.1-73.3';
 
@@ -226,12 +250,12 @@ const checkAndOptimise = async (expression) => {
   // const expression = 'a+b/c - 4.81/(x*y)';
   // const expression = 'cos(a)*sin(b)-tan(c)/(1+d)';
 
-  /*
+ /*
   const analized = await analyseCalculation(expression);
   if (!analized) return;
   const refactoredExp = refactorDivisiosInExpression(expression);
   const parsed = parse(refactoredExp);
-  // console.log(JSON.stringify(parsed, null, 2));
+  console.log(JSON.stringify(parsed, null, 2));
   if (!parsed.type) {
     console.log('Error while parsing expression');
     return;
@@ -242,9 +266,9 @@ const checkAndOptimise = async (expression) => {
     console.log('Error while optimizing expression');
     return;
   }
-  // console.log(JSON.stringify(optimized, null, 2));
+  console.log(JSON.stringify(optimized, null, 2));
   generateTree(optimized, 'tree');
-  */
+ */
 })();
 
 module.exports = {

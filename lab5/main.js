@@ -90,7 +90,6 @@ const printGanttChart = (data) => {
       ...operationStr.split(''),
       ...splitedStr.slice(endTime),
     ].join('');
-
   });
 
   console.log('\nGantt Chart:');
@@ -142,17 +141,19 @@ const calculateParallelExecutionTime = async (
     const operationExecutionTime = operationTime[operation] || 0;
     let currentStartTime = Math.max(leftTime, rightTime);
 
-    // перевірка, чи процесор в цей час виконує якусь іншу операцію. Якщо так - зачекати на завершення операції
-    processorLastTask = ganttChartData.findLast(
-      (el) => el.processorId == processor.id
-    );
-    if (processorLastTask) {
-      currentStartTime =
-        currentStartTime > processorLastTask.endTime
-          ? currentStartTime
-          : processorLastTask.endTime;
-    }
 
+    // console.log({startTimeBefore: currentStartTime, endTimeBefore: currentStartTime + operationExecutionTime})
+    if(ganttChartData[0]){
+      const sameTimeTasks = ganttChartData.filter(el =>  el.operation != operation)
+      let maxEndTime = currentStartTime;
+      for(let el of sameTimeTasks){
+        if(maxEndTime < el.endTime){
+          maxEndTime = el.endTime
+        }
+      }
+      currentStartTime = maxEndTime
+    }
+  
 
     ganttChartData.push({
       processorId: processor.id,
@@ -160,6 +161,14 @@ const calculateParallelExecutionTime = async (
       startTime: currentStartTime,
       endTime: currentStartTime + operationExecutionTime,
     });
+    // console.log({
+    //   processorId: processor.id,
+    //   operation,
+    //   startTime: currentStartTime,
+    //   endTime: currentStartTime + operationExecutionTime,
+    // })
+    // console.log('\n')
+
 
     if (logging) {
       console.log(`Процесор ${processor.id} виконує операцію ${operation}`);
@@ -176,7 +185,7 @@ const calculateParallelExecutionTime = async (
   }
 
   if (node.type === 'FunctionExpression') {
-    const argumentTime = await calculateParallelExecutionTime(
+    let argumentTime = await calculateParallelExecutionTime(
       node.argument,
       processor,
       matrixSystem,
@@ -186,6 +195,17 @@ const calculateParallelExecutionTime = async (
     const functionExecutionTime = operationTime[functionName] || 0;
     if (logging) {
       console.log(`Процесор ${processor.id} виконує функцію ${functionName}`);
+    }
+
+    if(ganttChartData[0]){
+      const sameTimeTasks = ganttChartData.filter(el => el.operation != functionName)
+      let maxEndTime = argumentTime;
+      for(let el of sameTimeTasks){
+        if(maxEndTime < el.endTime){
+          maxEndTime = el.endTime
+        }
+      }
+      argumentTime = maxEndTime
     }
 
     ganttChartData.push({
@@ -239,7 +259,9 @@ const calculateExecutionTime = async (expressionObj, logging = false) => {
     `Час виконання програми у послідовному режимі: ${sequentialTime}`
   );
   console.log(
-    `Час виконання програми у паралельному режимі матричної системи: ${parallelTime - 2}`
+    `Час виконання програми у паралельному режимі матричної системи: ${
+      parallelTime - 2
+    }`
   );
   let speedupRate = sequentialTime / (parallelTime - 2);
   console.log(`Коефіцієнт прискорення: ${speedupRate.toFixed(2)}`);
@@ -267,9 +289,9 @@ const calculateExecutionTime = async (expressionObj, logging = false) => {
   const res = await checkAndOptimise(
     'x*(y+z)-sin(a*x)/(cos(b+y)*tan(c/x))'
   );
-  // generateTree(res)
+  generateTree(res)
   if (res) {
-    await calculateExecutionTime(res, false);
+    await calculateExecutionTime(res, true);
   }
   printGanttChart(ganttChartData);
 })();
