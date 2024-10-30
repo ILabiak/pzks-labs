@@ -141,19 +141,19 @@ const calculateParallelExecutionTime = async (
     const operationExecutionTime = operationTime[operation] || 0;
     let currentStartTime = Math.max(leftTime, rightTime);
 
-
     // console.log({startTimeBefore: currentStartTime, endTimeBefore: currentStartTime + operationExecutionTime})
-    if(ganttChartData[0]){
-      const sameTimeTasks = ganttChartData.filter(el =>  el.operation != operation)
+    if (ganttChartData[0]) {
+      const sameTimeTasks = ganttChartData.filter(
+        (el) => el.operation != operation
+      );
       let maxEndTime = currentStartTime;
-      for(let el of sameTimeTasks){
-        if(maxEndTime < el.endTime){
-          maxEndTime = el.endTime
+      for (let el of sameTimeTasks) {
+        if (maxEndTime < el.endTime) {
+          maxEndTime = el.endTime;
         }
       }
-      currentStartTime = maxEndTime
+      currentStartTime = maxEndTime;
     }
-  
 
     ganttChartData.push({
       processorId: processor.id,
@@ -168,7 +168,6 @@ const calculateParallelExecutionTime = async (
     //   endTime: currentStartTime + operationExecutionTime,
     // })
     // console.log('\n')
-
 
     if (logging) {
       console.log(`Процесор ${processor.id} виконує операцію ${operation}`);
@@ -197,15 +196,17 @@ const calculateParallelExecutionTime = async (
       console.log(`Процесор ${processor.id} виконує функцію ${functionName}`);
     }
 
-    if(ganttChartData[0]){
-      const sameTimeTasks = ganttChartData.filter(el => el.operation != functionName)
+    if (ganttChartData[0]) {
+      const sameTimeTasks = ganttChartData.filter(
+        (el) => el.operation != functionName
+      );
       let maxEndTime = argumentTime;
-      for(let el of sameTimeTasks){
-        if(maxEndTime < el.endTime){
-          maxEndTime = el.endTime
+      for (let el of sameTimeTasks) {
+        if (maxEndTime < el.endTime) {
+          maxEndTime = el.endTime;
         }
       }
-      argumentTime = maxEndTime
+      argumentTime = maxEndTime;
     }
 
     ganttChartData.push({
@@ -286,10 +287,8 @@ const calculateExecutionTime = async (expressionObj, logging = false) => {
   // const expression = '5.67*x + 3*(y - 4.81)';
   // const expression = 'a+b/c - 4.81/(x*y)';
   // const expression = 'cos(a)*sin(b)-tan(c)/(1+d)';
-  const res = await checkAndOptimise(
-    'x*(y+z)-sin(a*x)/(cos(b+y)*tan(c/x))'
-  );
-  generateTree(res)
+  const res = await checkAndOptimise('(a+b)*(c+d)/e');
+  generateTree(res, 'tree');
   if (res) {
     await calculateExecutionTime(res, true);
   }

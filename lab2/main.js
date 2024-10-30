@@ -226,7 +226,7 @@ const checkAndOptimise = async (expression) => {
     console.log('Error while optimizing expression');
     return;
   }
-  return optimized;
+  return [optimized, refactoredExp];
 }
 
 (async () => {
